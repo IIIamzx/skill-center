@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PromptVault — AI Prompt 管理器</title>
+<style>
+/* ==================== 主题变量 ==================== */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f7fa;
+  --bg-card: #ffffff;
+  --bg-hover: #f0f2f5;
+  --bg-sidebar: #f8f9fb;
+  --bg-modal-overlay: rgba(0,0,0,0.4);
+  --bg-tag: #eef1f6;
+  --bg-input: #ffffff;
+  --bg-toast: #32363b;
+  --text-primary: #1a1d21;
+  --text-secondary: #5a6270;
+  --text-tertiary: #919aa6;
+  --text-inverse: #ffffff;
+  --text-tag: #4a5568;
+  --border: #e2e6eb;
+  --border-focus: #6366f1;
+  --accent: #6366f1;
+  --accent-hover: #5558e6;
+  --accent-light: #eef0ff;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-light: #fef2f2;
+  --warning: #f59e0b;
+  --success: #10b981;
+  --star: #f59e0b;
+  --star-empty: #d1d5db;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --sidebar-width: 240px;
+  --nav-height: 56px;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1d21;
+  --bg-secondary: #22262c;
+  --bg-card: #282c34;
+  --bg-hover: #2e333c;
+  --bg-sidebar: #1e2228;
+  --bg-modal-overlay: rgba(0,0,0,0.6);
+  --bg-tag: #333840;
+  --bg-input: #2e333c;
+  --bg-toast: #e2e6eb;
+  --text-primary: #e8eaed;
+  --text-secondary: #a0a8b4;
+  --text-tertiary: #6b7280;
+  --text-inverse: #1a1d21;
+  --text-tag: #a0a8b4;
+  --border: #3a3f48;
+  --border-focus: #818cf8;
+  --accent: #818cf8;
+  --accent-hover: #6366f1;
+  --accent-light: #1e1b3a;
+  --danger: #f87171;
+  --danger-hover: #ef4444;
+  --danger-light: #3b1c1c;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow: 0 2px 8px rgba(0,0,0,0.25);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+/* ==================== 全局样式 ==================== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); }
+button { font-family: var(--font); cursor: pointer; border: none; background: none; font-size: inherit; color: inherit; }
+input, textarea, select { font-family: var(--font); font-size: inherit; color: var(--text-primary); }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* ==================== 布局 ==================== */
+.app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* 顶部导航栏 */
+.navbar {
+  height: var(--nav-height); display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; background: var(--bg-primary); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; z-index: 100;
+}
+.navbar-brand { font-size: 18px; font-weight: 700; color: var(--accent); white-space: nowrap; letter-spacing: -0.3px; }
+.navbar-brand span { color: var(--text-primary); }
+.navbar-search {
+  flex: 1; max-width: 480px; position: relative; margin: 0 auto;
+}
+.navbar-search input {
+  width: 100%; height: 36px; padding: 0 12px 0 36px;
+  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 14px; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.navbar-search input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-light); }
+.navbar-search .search-icon {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--text-tertiary); font-size: 14px; pointer-events: none;
+}
+.navbar-search .search-hint {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 11px; color: var(--text-tertiary); background: var(--bg-primary);
+  border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px;
+}
+.navbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px;
+  border-radius: var(--radius); font-size: 13px; font-weight: 500; white-space: nowrap;
+  transition: all 0.15s;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--bg-hover); }
+.btn-danger { color: var(--danger); }
+.btn-danger:hover { background: var(--danger-light); }
+.btn-icon {
+  width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center;
+  justify-content: center; border-radius: var(--radius); font-size: 16px;
+  color: var(--text-secondary); transition: all 0.15s;
+}
+.btn-icon:hover { background: var(--bg-hover); color: var(--text-primary); }
+.sidebar-toggle { display: none; }
+
+/* 主区域 */
+.main-layout { display: flex; flex: 1; overflow: hidden; }
+
+/* 侧边栏 */
+.sidebar {
+  width: var(--sidebar-width); flex-shrink: 0; background: var(--bg-sidebar);
+  border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 0;
+  transition: transform 0.25s, opacity 0.25s;
+}
+.sidebar-section { padding: 4px 8px; }
+.sidebar-section-title {
+  font-size: 11px; font-weight: 600; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px 4px;
+}
+.sidebar-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border-radius: var(--radius-sm); font-size: 14px; color: var(--text-secondary);
+  cursor: pointer; transition: all 0.15s; width: 100%;
+}
+.sidebar-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+.sidebar-item.active { background: var(--accent-light); color: var(--accent); font-weight: 500; }
+.sidebar-item .item-icon { width: 20px; text-align: center; font-size: 14px; }
+.sidebar-item .item-count {
+  margin-left: auto; font-size: 11px; color: var(--text-tertiary);
+  background: var(--bg-tag); padding: 1px 6px; border-radius: 10px;
+}
+
+/* 内容区 */
+.content { flex: 1; overflow-y: auto; padding: 20px; }
+.content-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; padding: 0 4px;
+}
+.content-header h2 { font-size: 18px; font-weight: 600; }
+.content-header .count { font-size: 13px; color: var(--text-tertiary); }
+
+/* 卡片网格 */
+.cards-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 16px; cursor: pointer; transition: all 0.2s; position: relative;
+}
+.card:hover { box-shadow: var(--shadow); border-color: var(--accent); }
+.card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+.card-title { font-size: 15px; font-weight: 600; line-height: 1.4; flex: 1; margin-right: 8px; }
+.card-fav {
+  font-size: 16px; cursor: pointer; color: var(--star-empty); flex-shrink: 0;
+  transition: color 0.15s; padding: 2px;
+}
+.card-fav.active { color: var(--star); }
+.card-fav:hover { color: var(--star); }
+.card-category {
+  display: inline-block; font-size: 11px; font-weight: 500; color: var(--accent);
+  background: var(--accent-light); padding: 2px 8px; border-radius: 10px; margin-bottom: 8px;
+}
+.card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.tag {
+  font-size: 11px; color: var(--text-tag); background: var(--bg-tag);
+  padding: 2px 8px; border-radius: 10px; cursor: pointer; transition: all 0.15s;
+}
+.tag:hover { background: var(--accent-light); color: var(--accent); }
+.card-scenario { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5; }
+.card-preview {
+  font-size: 13px; color: var(--text-tertiary); line-height: 1.6;
+  max-height: 60px; overflow: hidden; margin-bottom: 12px;
+  word-break: break-all; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+}
+.card-footer { display: flex; align-items: center; justify-content: space-between; }
+.card-meta { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--text-tertiary); }
+.card-stars { color: var(--star); letter-spacing: 1px; }
+.card-actions { display: flex; gap: 4px; }
+.card-actions .btn-icon { width: 30px; height: 30px; font-size: 14px; opacity: 0.5; }
+.card-actions .btn-icon:hover { opacity: 1; }
+
+/* 空状态 */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 60px 20px; color: var(--text-tertiary); text-align: center;
+}
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+.empty-state h3 { font-size: 16px; margin-bottom: 8px; color: var(--text-secondary); }
+.empty-state p { font-size: 14px; max-width: 300px; line-height: 1.6; }
+
+/* ==================== 弹窗 ==================== */
+.modal-overlay {
+  position: fixed; inset: 0; background: var(--bg-modal-overlay);
+  display: none; align-items: center; justify-content: center; z-index: 1000;
+  padding: 20px; opacity: 0; transition: opacity 0.2s;
+}
+.modal-overlay.show { display: flex; opacity: 1; }
+.modal {
+  background: var(--bg-primary); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg); width: 100%; max-width: 600px; max-height: 90vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.modal-lg { max-width: 760px; }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+}
+.modal-header h3 { font-size: 16px; font-weight: 600; }
+.modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--border); }
+
+/* 表单 */
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+.form-input, .form-select, .form-textarea {
+  width: 100%; padding: 8px 12px; background: var(--bg-input);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 14px; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-light);
+}
+.form-textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
+.form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%236b7280' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+.form-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
+
+/* 星级评分 */
+.rating-input { display: flex; gap: 4px; }
+.rating-input .star {
+  font-size: 22px; cursor: pointer; color: var(--star-empty); transition: color 0.15s;
+}
+.rating-input .star.active { color: var(--star); }
+.rating-input .star:hover { color: var(--star); }
+
+/* 收藏开关 */
+.toggle-switch { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.toggle-track {
+  width: 40px; height: 22px; background: var(--border); border-radius: 11px;
+  position: relative; transition: background 0.2s;
+}
+.toggle-track.active { background: var(--accent); }
+.toggle-thumb {
+  width: 18px; height: 18px; background: #fff; border-radius: 50%;
+  position: absolute; top: 2px; left: 2px; transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-track.active .toggle-thumb { transform: translateX(18px); }
+.toggle-label { font-size: 14px; color: var(--text-secondary); }
+
+/* 详情面板 */
+.detail-content { font-size: 14px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; margin-bottom: 16px; }
+.detail-section { margin-bottom: 20px; }
+.detail-section-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.3px; }
+.var-input-group { margin-bottom: 10px; }
+.var-input-group label { display: block; font-size: 13px; color: var(--accent); margin-bottom: 4px; font-weight: 500; }
+.var-input-group input {
+  width: 100%; padding: 8px 12px; background: var(--bg-input);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 14px; outline: none;
+}
+.var-input-group input:focus { border-color: var(--border-focus); }
+.final-prompt {
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px; font-size: 13px;
+  line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+  max-height: 200px; overflow-y: auto;
+}
+
+/* Toast */
+.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 2000; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--bg-toast); color: var(--text-inverse); padding: 10px 16px;
+  border-radius: var(--radius); font-size: 13px; box-shadow: var(--shadow-lg);
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.2s forwards;
+  display: flex; align-items: center; gap: 8px;
+}
+.toast.success::before { content: "✓"; color: var(--success); font-weight: 700; }
+.toast.error::before { content: "✗"; color: var(--danger); font-weight: 700; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* 确认弹窗 */
+.confirm-modal .modal { max-width: 400px; }
+.confirm-text { font-size: 14px; color: var(--text-secondary); line-height: 1.6; text-align: center; padding: 8px 0; }
+
+/* 移动端响应式 */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed; top: var(--nav-height); left: 0; bottom: 0;
+    transform: translateX(-100%); z-index: 200; opacity: 0;
+    box-shadow: var(--shadow-lg);
+  }
+  .sidebar.open { transform: translateX(0); opacity: 1; }
+  .sidebar-toggle { display: inline-flex; }
+  .navbar-search { max-width: none; }
+  .navbar-search .search-hint { display: none; }
+  .navbar-actions .btn-text { display: none; }
+  .cards-grid { grid-template-columns: 1fr; }
+  .content { padding: 12px; }
+  .modal { margin: 10px; max-height: 95vh; }
+  .form-row { flex-direction: column; gap: 0; }
+}
+
+@media (max-width: 480px) {
+  .navbar-brand span { display: none; }
+  .navbar-actions { gap: 4px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 顶部导航栏 -->
+  <nav class="navbar">
+    <button class="btn-icon sidebar-toggle" onclick="UIController.toggleSidebar()" title="菜单">☰</button>
+    <div class="navbar-brand">⚡<span>Prompt</span>Vault</div>
+    <div class="navbar-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="搜索 Prompt..." oninput="UIController.onSearch(this.value)">
+      <span class="search-hint">⌘K</span>
+    </div>
+    <div class="navbar-actions">
+      <button class="btn btn-primary" onclick="UIController.openCreateModal()">＋ 新建</button>
+      <button class="btn btn-secondary" onclick="PromptService.importData()">⬆ 导入</button>
+      <button class="btn btn-secondary" onclick="PromptService.exportData()">⬇ 导出</button>
+      <button class="btn-icon" onclick="UIController.toggleTheme()" id="themeBtn" title="切换主题">🌙</button>
+    </div>
+  </nav>
+
+  <div class="main-layout">
+    <!-- 左侧侧边栏 -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-item active" data-filter="all" onclick="UIController.setFilter('all')">
+          <span class="item-icon">📋</span> 全部 Prompt <span class="item-count" id="count-all">0</span>
+        </div>
+        <div class="sidebar-item" data-filter="favorites" onclick="UIController.setFilter('favorites')">
+          <span class="item-icon">⭐</span> 收藏 <span class="item-count" id="count-favorites">0</span>
+        </div>
+        <div class="sidebar-item" data-filter="recent" onclick="UIController.setFilter('recent')">
+          <span class="item-icon">🕐</span> 最近使用 <span class="item-count" id="count-recent">0</span>
+        </div>
+        <div class="sidebar-item" data-filter="top-rated" onclick="UIController.setFilter('top-rated')">
+          <span class="item-icon">🏆</span> 高评分 <span class="item-count" id="count-top-rated">0</span>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">分类</div>
+        <div class="sidebar-item" data-filter="cat:写作" onclick="UIController.setFilter('cat:写作')"><span class="item-icon">✍️</span> 写作</div>
+        <div class="sidebar-item" data-filter="cat:编程" onclick="UIController.setFilter('cat:编程')"><span class="item-icon">💻</span> 编程</div>
+        <div class="sidebar-item" data-filter="cat:营销" onclick="UIController.setFilter('cat:营销')"><span class="item-icon">📣</span> 营销</div>
+        <div class="sidebar-item" data-filter="cat:学习" onclick="UIController.setFilter('cat:学习')"><span class="item-icon">📚</span> 学习</div>
+        <div class="sidebar-item" data-filter="cat:产品" onclick="UIController.setFilter('cat:产品')"><span class="item-icon">🎯</span> 产品</div>
+        <div class="sidebar-item" data-filter="cat:设计" onclick="UIController.setFilter('cat:设计')"><span class="item-icon">🎨</span> 设计</div>
+        <div class="sidebar-item" data-filter="cat:其他" onclick="UIController.setFilter('cat:其他')"><span class="item-icon">📎</span> 其他</div>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="content" id="mainContent">
+      <div class="content-header">
+        <h2 id="contentTitle">全部 Prompt</h2>
+        <span class="count" id="contentCount"></span>
+      </div>
+      <div class="cards-grid" id="cardsGrid"></div>
+    </main>
+  </div>
+</div>
+
+<!-- 新建/编辑弹窗 -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="editModalTitle">新建 Prompt</h3>
+      <button class="btn-icon" onclick="UIController.closeEditModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <div class="form-group">
+        <label class="form-label">标题</label>
+        <input type="text" class="form-input" id="editTitle" placeholder="输入 Prompt 标题">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">分类</label>
+          <select class="form-select" id="editCategory">
+            <option value="写作">写作</option>
+            <option value="编程">编程</option>
+            <option value="营销">营销</option>
+            <option value="学习">学习</option>
+            <option value="产品">产品</option>
+            <option value="设计">设计</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">评分</label>
+          <div class="rating-input" id="editRating"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">标签 <span style="font-weight:400">(逗号分隔)</span></label>
+        <input type="text" class="form-input" id="editTags" placeholder="例如: 写作, 总结, 小红书">
+      </div>
+      <div class="form-group">
+        <label class="form-label">使用场景说明</label>
+        <input type="text" class="form-input" id="editScenario" placeholder="描述这个 Prompt 的使用场景">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prompt 正文</label>
+        <textarea class="form-textarea" id="editContent" placeholder="输入 Prompt 内容。可使用 {变量名} 作为占位符，例如：请帮我写一篇关于{主题}的文章"></textarea>
+        <div class="form-hint">使用 {变量名} 添加可替换的变量占位符</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">收藏</label>
+        <div class="toggle-switch" onclick="UIController.toggleEditFavorite()">
+          <div class="toggle-track" id="editFavorite"><div class="toggle-thumb"></div></div>
+          <span class="toggle-label" id="editFavoriteLabel">未收藏</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="UIController.closeEditModal()">取消</button>
+      <button class="btn btn-primary" onclick="UIController.savePrompt()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 详情弹窗 -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="detailTitle"></h3>
+      <button class="btn-icon" onclick="UIController.closeDetailModal()">✕</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="UIController.editFromDetail()">编辑</button>
+      <button class="btn btn-primary" id="detailCopyBtn" onclick="UIController.copyFromDetail()">复制内容</button>
+    </div>
+  </div>
+</div>
+
+<!-- 确认弹窗 -->
+<div class="modal-overlay confirm-modal" id="confirmModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>确认删除</h3>
+      <button class="btn-icon" onclick="UIController.closeConfirm()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-text" id="confirmText">确定要删除这个 Prompt 吗？此操作不可撤销。</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="UIController.closeConfirm()">取消</button>
+      <button class="btn btn-primary" style="background:var(--danger)" onclick="UIController.confirmAction()">删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast 容器 -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- 隐藏文件输入 -->
+<input type="file" id="importFileInput" accept=".json" style="display:none" onchange="PromptService.handleImport(event)">
+
+<script>
+// ============================================================
+// PromptVault — AI Prompt 管理器
+// 模块化结构：Utils → StorageService → TemplateService →
+//            AppState → PromptService → UIController
+// ============================================================
+
+// ==================== Utils 工具模块 ====================
+const Utils = {
+  // 生成唯一 ID
+  generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  },
+
+  // 格式化时间
+  formatTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const now = new Date();
+    const diff = now - d;
+    if (diff < 60000) return '刚刚';
+    if (diff < 3600000) return Math.floor(diff / 60000) + ' 分钟前';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + ' 小时前';
+    if (diff < 604800000) return Math.floor(diff / 86400000) + ' 天前';
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  },
+
+  // 防抖
+  debounce(fn, delay) {
+    let timer;
+    return function(...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+  },
+
+  // 复制到剪贴板
+  async copyToClipboard(text) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (e) { /* fallback */ }
+    // fallback: textarea
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;left:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); return true; }
+    catch (e) { return false; }
+    finally { document.body.removeChild(ta); }
+  },
+
+  // HTML 转义
+  escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+};
+
+// ==================== StorageService 存储模块 ====================
+const StorageService = {
+  KEY: 'promptvault_data',
+  THEME_KEY: 'promptvault_theme',
+
+  _available: null,
+
+  // 检测 localStorage 是否可用
+  isAvailable() {
+    if (this._available !== null) return this._available;
+    try {
+      const k = '__pv_test__';
+      localStorage.setItem(k, '1');
+      localStorage.removeItem(k);
+      this._available = true;
+    } catch (e) {
+      this._available = false;
+    }
+    return this._available;
+  },
+
+  // 读取所有 Prompt
+  load() {
+    if (!this.isAvailable()) return null;
+    try {
+      const raw = localStorage.getItem(this.KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  },
+
+  // 保存所有 Prompt
+  save(prompts) {
+    if (!this.isAvailable()) {
+      UIController.showToast('存储不可用，数据无法保存', 'error');
+      return false;
+    }
+    try {
+      localStorage.setItem(this.KEY, JSON.stringify(prompts));
+      return true;
+    } catch (e) {
+      UIController.showToast('存储空间不足，保存失败', 'error');
+      return false;
+    }
+  },
+
+  // 读取主题
+  loadTheme() {
+    return localStorage.getItem(this.THEME_KEY) || 'light';
+  },
+
+  // 保存主题
+  saveTheme(theme) {
+    try { localStorage.setItem(this.THEME_KEY, theme); } catch (e) {}
+  }
+};
+
+// ==================== TemplateService 模板模块 ====================
+const TemplateService = {
+  // 从文本中提取变量名（去重）
+  extractVariables(text) {
+    if (!text) return [];
+    const matches = text.match(/\{([^}]+)\}/g);
+    if (!matches) return [];
+    const seen = new Set();
+    return matches.map(m => m.slice(1, -1)).filter(v => {
+      if (seen.has(v)) return false;
+      seen.add(v);
+      return true;
+    });
+  },
+
+  // 替换变量
+  fillTemplate(text, vars) {
+    if (!text) return '';
+    let result = text;
+    for (const [key, val] of Object.entries(vars)) {
+      if (val) {
+        // 全局替换同名变量
+        result = result.split('{' + key + '}').join(val);
+      }
+    }
+    return result;
+  }
+};
+
+// ==================== AppState 状态模块 ====================
+const AppState = {
+  prompts: [],
+  currentFilter: 'all',
+  searchQuery: '',
+  selectedPromptId: null,
+  editingPromptId: null,  // null=新建, string=编辑
+  editFavorite: false,
+  editRating: 0,
+  theme: 'light',
+  pendingDeleteId: null,
+
+  // 获取筛选后的 Prompt 列表
+  getFilteredPrompts() {
+    let list = [...this.prompts];
+    const q = this.searchQuery.toLowerCase().trim();
+
+    // 搜索
+    if (q) {
+      list = list.filter(p =>
+        (p.title || '').toLowerCase().includes(q) ||
+        (p.content || '').toLowerCase().includes(q) ||
+        (p.tags || []).some(t => t.toLowerCase().includes(q)) ||
+        (p.scenario || '').toLowerCase().includes(q)
+      );
+    }
+
+    // 分类筛选
+    const f = this.currentFilter;
+    if (f === 'favorites') {
+      list = list.filter(p => p.favorite);
+    } else if (f === 'recent') {
+      list = list.filter(p => p.usedAt).sort((a, b) => (b.usedAt || 0) - (a.usedAt || 0));
+    } else if (f === 'top-rated') {
+      list = list.filter(p => p.rating >= 4).sort((a, b) => b.rating - a.rating);
+    } else if (f.startsWith('cat:')) {
+      const cat = f.slice(4);
+      list = list.filter(p => p.category === cat);
+    }
+    // all: 不筛选，按更新时间倒序
+    if (f === 'all' && !q) {
+      list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    }
+
+    return list;
+  },
+
+  // 获取各分类计数
+  getCounts() {
+    const all = this.prompts.length;
+    const fav = this.prompts.filter(p => p.favorite).length;
+    const recent = this.prompts.filter(p => p.usedAt).length;
+    const top = this.prompts.filter(p => p.rating >= 4).length;
+    const cats = {};
+    const catNames = ['写作', '编程', '营销', '学习', '产品', '设计', '其他'];
+    catNames.forEach(c => { cats[c] = this.prompts.filter(p => p.category === c).length; });
+    return { all, favorites: fav, recent, topRated: top, cats };
+  }
+};
+
+// ==================== PromptService 业务模块 ====================
+const PromptService = {
+  // 初始化：加载数据或创建默认示例
+  init() {
+    let data = StorageService.load();
+    if (!data || !Array.isArray(data)) {
+      data = this.getDefaultPrompts();
+      StorageService.save(data);
+    }
+    AppState.prompts = data;
+  },
+
+  // 新建 Prompt
+  create(data) {
+    const now = Date.now();
+    const prompt = {
+      id: Utils.generateId(),
+      title: data.title || '未命名 Prompt',
+      category: data.category || '其他',
+      tags: data.tags || [],
+      scenario: data.scenario || '',
+      content: data.content || '',
+      rating: data.rating || 0,
+      favorite: data.favorite || false,
+      createdAt: now,
+      updatedAt: now,
+      usedAt: null,
+      useCount: 0
+    };
+    AppState.prompts.unshift(prompt);
+    StorageService.save(AppState.prompts);
+    return prompt;
+  },
+
+  // 编辑 Prompt
+  update(id, data) {
+    const idx = AppState.prompts.findIndex(p => p.id === id);
+    if (idx === -1) return null;
+    const p = AppState.prompts[idx];
+    Object.assign(p, {
+      title: data.title !== undefined ? data.title : p.title,
+      category: data.category !== undefined ? data.category : p.category,
+      tags: data.tags !== undefined ? data.tags : p.tags,
+      scenario: data.scenario !== undefined ? data.scenario : p.scenario,
+      content: data.content !== undefined ? data.content : p.content,
+      rating: data.rating !== undefined ? data.rating : p.rating,
+      favorite: data.favorite !== undefined ? data.favorite : p.favorite,
+      updatedAt: Date.now()
+    });
+    StorageService.save(AppState.prompts);
+    return p;
+  },
+
+  // 删除 Prompt
+  delete(id) {
+    const idx = AppState.prompts.findIndex(p => p.id === id);
+    if (idx === -1) return false;
+    AppState.prompts.splice(idx, 1);
+    StorageService.save(AppState.prompts);
+    return true;
+  },
+
+  // 记录使用（复制时调用）
+  recordUse(id) {
+    const p = AppState.prompts.find(p => p.id === id);
+    if (!p) return;
+    p.usedAt = Date.now();
+    p.useCount = (p.useCount || 0) + 1;
+    p.updatedAt = Date.now();
+    StorageService.save(AppState.prompts);
+  },
+
+  // 切换收藏
+  toggleFavorite(id) {
+    const p = AppState.prompts.find(p => p.id === id);
+    if (!p) return;
+    p.favorite = !p.favorite;
+    p.updatedAt = Date.now();
+    StorageService.save(AppState.prompts);
+    return p.favorite;
+  },
+
+  // 设置评分
+  setRating(id, rating) {
+    const p = AppState.prompts.find(p => p.id === id);
+    if (!p) return;
+    p.rating = rating;
+    p.updatedAt = Date.now();
+    StorageService.save(AppState.prompts);
+  },
+
+  // 导出数据为 JSON 文件
+  exportData() {
+    const json = JSON.stringify(AppState.prompts, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'promptvault_export_' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    UIController.showToast('导出成功');
+  },
+
+  // 触发导入文件选择
+  importData() {
+    document.getElementById('importFileInput').click();
+  },
+
+  // 处理导入文件
+  handleImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        let data = JSON.parse(e.target.result);
+        if (!Array.isArray(data)) throw new Error('数据格式错误：期望数组');
+
+        // 基础校验
+        const valid = data.filter(item =>
+          item && typeof item === 'object' && (item.title || item.content)
+        );
+        if (valid.length === 0) throw new Error('未找到有效的 Prompt 数据');
+
+        // 处理 id 冲突：重新生成 id
+        const existingIds = new Set(AppState.prompts.map(p => p.id));
+        let imported = 0;
+        valid.forEach(item => {
+          if (existingIds.has(item.id) || !item.id) {
+            item.id = Utils.generateId();
+          }
+          existingIds.add(item.id);
+          // 补全字段
+          const now = Date.now();
+          item.title = item.title || '未命名 Prompt';
+          item.category = item.category || '其他';
+          item.tags = Array.isArray(item.tags) ? item.tags : [];
+          item.scenario = item.scenario || '';
+          item.content = item.content || '';
+          item.rating = item.rating || 0;
+          item.favorite = item.favorite || false;
+          item.createdAt = item.createdAt || now;
+          item.updatedAt = now;
+          item.usedAt = item.usedAt || null;
+          item.useCount = item.useCount || 0;
+          AppState.prompts.push(item);
+          imported++;
+        });
+
+        StorageService.save(AppState.prompts);
+        UIController.renderAll();
+        UIController.showToast('导入成功，共导入 ' + imported + ' 条 Prompt');
+      } catch (err) {
+        UIController.showToast('导入失败：' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file);
+    // 重置 input 以便再次选择同一文件
+    event.target.value = '';
+  },
+
+  // 默认示例 Prompt
+  getDefaultPrompts() {
+    const now = Date.now();
+    return [
+      {
+        id: Utils.generateId(), title: '文章润色优化', category: '写作',
+        tags: ['润色', '写作', '优化'], scenario: '用于优化和润色已有文章的措辞和表达',
+        content: '请帮我润色以下文章，使其表达更加流畅、专业。要求：\n1. 保持原文核心意思不变\n2. 优化措辞和句式结构\n3. {语气风格}的语气\n4. 输出格式为：{输出格式}\n\n原文：\n{文章内容}',
+        rating: 5, favorite: true, createdAt: now, updatedAt: now, usedAt: null, useCount: 0
+      },
+      {
+        id: Utils.generateId(), title: '代码逐行解释', category: '编程',
+        tags: ['代码', '解释', '学习'], scenario: '逐行解释一段代码的功能和原理',
+        content: '请逐行解释以下代码的功能和原理，用通俗易懂的语言说明：\n\n```\n{代码内容}\n```\n\n请使用{语言}进行解释。',
+        rating: 4, favorite: false, createdAt: now, updatedAt: now, usedAt: null, useCount: 0
+      },
+      {
+        id: Utils.generateId(), title: 'Bug 排查与修复', category: '编程',
+        tags: ['Bug', '调试', '修复'], scenario: '分析代码中的 Bug 并提供修复方案',
+        content: '以下代码出现了一个问题，请帮我排查并修复：\n\n问题描述：{问题描述}\n\n代码：\n```\n{代码内容}\n```\n\n请分析可能的原因并提供修复后的代码。',
+        rating: 5, favorite: true, createdAt: now, updatedAt: now, usedAt: null, useCount: 0
+      },
+      {
+        id: Utils.generateId(), title: '产品需求文档生成', category: '产品',
+        tags: ['PRD', '需求', '产品'], scenario: '根据简要描述生成产品需求文档',
+        content: '请根据以下信息，生成一份完整的产品需求文档（PRD）：\n\n产品名称：{产品名称}\n目标用户：{目标用户}\n核心功能：{核心功能}\n\n要求包含：\n1. 背景与目标\n2. 用户故事\n3. 功能需求列表\n4. 非功能性需求\n5. 优先级排序',
+        rating: 4, favorite: false, createdAt: now, updatedAt: now, usedAt: null, useCount: 0
+      },
+      {
+        id: Utils.generateId(), title: '小红书种草文案', category: '营销',
+        tags: ['小红书', '文案', '种草'], scenario: '生成小红书风格的种草文案',
+        content: '请帮我写一篇小红书种草文案：\n\n产品/主题：{产品名称}\n目标人群：{目标人群}\n核心卖点：{核心卖点}\n\n要求：\n1. 标题吸引眼球，使用数字或对比\n2. 正文口语化，像朋友推荐\n3. 适当使用 emoji 表情\n4. 包含 3-5 个相关话题标签\n5. 字数 200-400 字',
+        rating: 5, favorite: true, createdAt: now, updatedAt: now, usedAt: null, useCount: 0
+      },
+      {
+        id: Utils.generateId(), title: '英语对话练习', category: '学习',
+        tags: ['英语', '对话', '练习'], scenario: '模拟英语对话场景进行口语练习',
+        content: '让我们进行一段英语对话练习：\n\n场景：{场景}\n我的角色：{我的角色}\n对话对象：{对话对象}\n\n请用英语和我对话，每次回复包含：\n1. 对方的英文回复\n2. 中文翻译\n3. 重点词汇或表达（如有）\n\n请先开始对话。',
+        rating: 4, favorite: false, createdAt: now, updatedAt: now, usedAt: null, useCount: 0
+      },
+      {
+        id: Utils.generateId(), title: 'UI 设计反馈与建议', category: '设计',
+        tags: ['UI', '设计', '反馈'], scenario: '对 UI 设计提供专业的反馈和改进建议',
+        content: '请对以下 UI 设计描述提供专业反馈：\n\n设计描述：{设计描述}\n目标平台：{目标平台}\n目标用户：{目标用户}\n\n请从以下维度给出评价和改进建议：\n1. 视觉层次和信息架构\n2. 色彩搭配和品牌一致性\n3. 交互设计和用户体验\n4. 无障碍性\n5. 响应式适配建议',
+        rating: 3, favorite: false, createdAt: now, updatedAt: now, usedAt: null, useCount: 0
+      },
+      {
+        id: Utils.generateId(), title: '周报自动生成', category: '其他',
+        tags: ['周报', '汇报', '工作'], scenario: '根据本周工作内容自动生成周报',
+        content: '请根据以下信息帮我生成本周工作周报：\n\n本周完成的工作：\n{完成事项}\n\n遇到的问题：\n{遇到的问题}\n\n下周计划：\n{下周计划}\n\n要求格式简洁专业，包含：\n1. 本周工作总结\n2. 重点项目进展\n3. 遇到的困难和解决方案\n4. 下周工作计划',
+        rating: 4, favorite: true, createdAt: now, updatedAt: now, usedAt: null, useCount: 0
+      },
+      {
+        id: Utils.generateId(), title: '数据分析报告生成', category: '产品',
+        tags: ['数据', '分析', '报告'], scenario: '根据数据指标生成分析报告',
+        content: '请根据以下数据生成一份数据分析报告：\n\n数据指标：{数据指标}\n时间范围：{时间范围}\n分析目的：{分析目的}\n\n报告要求：\n1. 关键数据摘要\n2. 趋势分析\n3. 异常数据标注\n4. 可能的原因分析\n5. 优化建议',
+        rating: 3, favorite: false, createdAt: now, updatedAt: now, usedAt: null, useCount: 0
+      },
+      {
+        id: Utils.generateId(), title: '会议纪要整理', category: '其他',
+        tags: ['会议', '纪要', '整理'], scenario: '将会议录音或笔记整理为结构化纪要',
+        content: '请将以下会议记录整理为结构化的会议纪要：\n\n会议主题：{会议主题}\n参会人员：{参会人员}\n原始记录：\n{原始记录}\n\n输出格式：\n1. 会议基本信息\n2. 讨论要点（按议题分组）\n3. 关键决议\n4. 待办事项（含负责人和截止日期）',
+        rating: 4, favorite: false, createdAt: now, updatedAt: now, usedAt: null, useCount: 0
+      }
+    ];
+  }
+};
+
+// ==================== UIController 界面控制模块 ====================
+const UIController = {
+  // 初始化应用
+  init() {
+    // 检查存储可用性
+    if (!StorageService.isAvailable()) {
+      this.showToast('浏览器存储不可用，数据将无法保存', 'error');
+    }
+
+    PromptService.init();
+    this.initTheme();
+    this.renderAll();
+    this.bindKeyboard();
+  },
+
+  // 初始化主题
+  initTheme() {
+    AppState.theme = StorageService.loadTheme();
+    this.applyTheme();
+  },
+
+  // 切换主题
+  toggleTheme() {
+    AppState.theme = AppState.theme === 'light' ? 'dark' : 'light';
+    StorageService.saveTheme(AppState.theme);
+    this.applyTheme();
+  },
+
+  applyTheme() {
+    document.documentElement.setAttribute('data-theme', AppState.theme);
+    document.getElementById('themeBtn').textContent = AppState.theme === 'light' ? '🌙' : '☀️';
+  },
+
+  // 键盘快捷键
+  bindKeyboard() {
+    document.addEventListener('keydown', (e) => {
+      // Ctrl/Cmd + K: 聚焦搜索
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('searchInput').focus();
+      }
+      // Esc: 关闭弹窗
+      if (e.key === 'Escape') {
+        this.closeTopModal();
+      }
+    });
+  },
+
+  // 关闭最上层的弹窗
+  closeTopModal() {
+    const modals = ['confirmModal', 'editModal', 'detailModal'];
+    for (const id of modals) {
+      const el = document.getElementById(id);
+      if (el.classList.contains('show')) {
+        el.classList.remove('show');
+        if (id === 'detailModal') AppState.selectedPromptId = null;
+        return;
+      }
+    }
+  },
+
+  // 侧边栏切换（移动端）
+  toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+  },
+
+  // 搜索
+  onSearch: Utils.debounce(function(value) {
+    AppState.searchQuery = value;
+    UIController.renderCards();
+  }, 200),
+
+  // 设置筛选器
+  setFilter(filter) {
+    AppState.currentFilter = filter;
+    // 更新侧边栏高亮
+    document.querySelectorAll('.sidebar-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.filter === filter);
+    });
+    // 更新标题
+    const titles = {
+      all: '全部 Prompt', favorites: '收藏', recent: '最近使用', 'top-rated': '高评分'
+    };
+    const title = filter.startsWith('cat:') ? filter.slice(4) : (titles[filter] || 'Prompt');
+    document.getElementById('contentTitle').textContent = title;
+    this.renderCards();
+    // 移动端关闭侧边栏
+    document.getElementById('sidebar').classList.remove('open');
+  },
+
+  // 渲染所有
+  renderAll() {
+    this.renderCards();
+    this.renderSidebarCounts();
+  },
+
+  // 渲染侧边栏计数
+  renderSidebarCounts() {
+    const c = AppState.getCounts();
+    document.getElementById('count-all').textContent = c.all;
+    document.getElementById('count-favorites').textContent = c.favorites;
+    document.getElementById('count-recent').textContent = c.recent;
+    document.getElementById('count-top-rated').textContent = c.topRated;
+  },
+
+  // 渲染卡片列表
+  renderCards() {
+    const grid = document.getElementById('cardsGrid');
+    const prompts = AppState.getFilteredPrompts();
+    const countEl = document.getElementById('contentCount');
+    countEl.textContent = prompts.length + ' 条';
+
+    if (prompts.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div><h3>暂无 Prompt</h3><p>' +
+        (AppState.searchQuery ? '没有找到匹配的 Prompt，试试其他关键词' : '点击「新建」按钮添加你的第一个 Prompt') +
+        '</p></div>';
+      return;
+    }
+
+    grid.innerHTML = prompts.map(p => this.renderCard(p)).join('');
+    this.renderSidebarCounts();
+  },
+
+  // 渲染单个卡片
+  renderCard(p) {
+    const stars = '★'.repeat(p.rating) + '☆'.repeat(5 - p.rating);
+    const preview = (p.content || '').slice(0, 120).replace(/\n/g, ' ');
+    const timeStr = Utils.formatTime(p.usedAt || p.updatedAt);
+    const tagsHtml = (p.tags || []).map(t =>
+      '<span class="tag" onclick="event.stopPropagation(); UIController.filterByTag(\'' + Utils.escapeHtml(t) + '\')">' + Utils.escapeHtml(t) + '</span>'
+    ).join('');
+
+    return '<div class="card" onclick="UIController.openDetail(\'' + p.id + '\')">' +
+      '<div class="card-header">' +
+        '<div class="card-title">' + Utils.escapeHtml(p.title) + '</div>' +
+        '<span class="card-fav' + (p.favorite ? ' active' : '') + '" onclick="event.stopPropagation(); UIController.toggleFav(\'' + p.id + '\')">' + (p.favorite ? '★' : '☆') + '</span>' +
+      '</div>' +
+      '<span class="card-category">' + Utils.escapeHtml(p.category) + '</span>' +
+      (tagsHtml ? '<div class="card-tags">' + tagsHtml + '</div>' : '') +
+      (p.scenario ? '<div class="card-scenario">' + Utils.escapeHtml(p.scenario) + '</div>' : '') +
+      '<div class="card-preview">' + Utils.escapeHtml(preview) + '</div>' +
+      '<div class="card-footer">' +
+        '<div class="card-meta">' +
+          (p.rating ? '<span class="card-stars">' + stars + '</span>' : '') +
+          (timeStr ? '<span>' + timeStr + '</span>' : '') +
+          (p.useCount ? '<span>使用 ' + p.useCount + ' 次</span>' : '') +
+        '</div>' +
+        '<div class="card-actions">' +
+          '<button class="btn-icon" title="复制" onclick="event.stopPropagation(); UIController.copyPrompt(\'' + p.id + '\')">📋</button>' +
+          '<button class="btn-icon" title="编辑" onclick="event.stopPropagation(); UIController.openEditModal(\'' + p.id + '\')">✏️</button>' +
+          '<button class="btn-icon" title="删除" onclick="event.stopPropagation(); UIController.confirmDelete(\'' + p.id + '\')">🗑️</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  },
+
+  // 按标签筛选
+  filterByTag(tag) {
+    AppState.searchQuery = tag;
+    document.getElementById('searchInput').value = tag;
+    this.renderCards();
+  },
+
+  // 切换收藏
+  toggleFav(id) {
+    const fav = PromptService.toggleFavorite(id);
+    this.showToast(fav ? '已收藏' : '已取消收藏');
+    this.renderAll();
+  },
+
+  // 复制 Prompt
+  async copyPrompt(id) {
+    const p = AppState.prompts.find(p => p.id === id);
+    if (!p) return;
+    const ok = await Utils.copyToClipboard(p.content);
+    if (ok) {
+      PromptService.recordUse(id);
+      this.showToast('已复制到剪贴板');
+      this.renderCards();
+    } else {
+      this.showToast('复制失败，请手动复制', 'error');
+    }
+  },
+
+  // 打开详情
+  openDetail(id) {
+    AppState.selectedPromptId = id;
+    const p = AppState.prompts.find(p => p.id === id);
+    if (!p) return;
+
+    document.getElementById('detailTitle').textContent = p.title;
+    const vars = TemplateService.extractVariables(p.content);
+    let html = '';
+
+    // 基本信息
+    html += '<div class="detail-section">';
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">';
+    html += '<span class="card-category">' + Utils.escapeHtml(p.category) + '</span>';
+    (p.tags || []).forEach(t => {
+      html += '<span class="tag">' + Utils.escapeHtml(t) + '</span>';
+    });
+    html += '</div>';
+    if (p.scenario) html += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">' + Utils.escapeHtml(p.scenario) + '</div>';
+    html += '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px">★'.repeat(p.rating) + '☆'.repeat(5 - p.rating) + ' · 使用 ' + (p.useCount || 0) + ' 次</div>';
+    html += '</div>';
+
+    // Prompt 原文
+    html += '<div class="detail-section">';
+    html += '<div class="detail-section-title">Prompt 原文</div>';
+    html += '<div class="detail-content">' + Utils.escapeHtml(p.content) + '</div>';
+    html += '</div>';
+
+    // 变量填入区
+    if (vars.length > 0) {
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">变量替换</div>';
+      vars.forEach(v => {
+        html += '<div class="var-input-group">';
+        html += '<label>{' + Utils.escapeHtml(v) + '}</label>';
+        html += '<input type="text" class="form-input" data-var="' + Utils.escapeHtml(v) + '" oninput="UIController.updateFinalPrompt()">';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      // 最终结果
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">生成结果</div>';
+      html += '<div class="final-prompt" id="finalPrompt">' + Utils.escapeHtml(p.content) + '</div>';
+      html += '</div>';
+    }
+
+    document.getElementById('detailBody').innerHTML = html;
+    document.getElementById('detailModal').classList.add('show');
+  },
+
+  // 实时更新最终 Prompt
+  updateFinalPrompt() {
+    const p = AppState.prompts.find(p => p.id === AppState.selectedPromptId);
+    if (!p) return;
+    const vars = {};
+    document.querySelectorAll('#detailBody [data-var]').forEach(el => {
+      vars[el.dataset.var] = el.value;
+    });
+    const result = TemplateService.fillTemplate(p.content, vars);
+    document.getElementById('finalPrompt').textContent = result;
+  },
+
+  // 从详情面板复制
+  async copyFromDetail() {
+    const p = AppState.prompts.find(p => p.id === AppState.selectedPromptId);
+    if (!p) return;
+
+    // 检查是否有变量区域
+    const finalEl = document.getElementById('finalPrompt');
+    const text = finalEl ? finalEl.textContent : p.content;
+
+    const ok = await Utils.copyToClipboard(text);
+    if (ok) {
+      PromptService.recordUse(p.id);
+      this.showToast('已复制到剪贴板');
+      this.renderCards();
+    } else {
+      this.showToast('复制失败', 'error');
+    }
+  },
+
+  // 从详情面板打开编辑
+  editFromDetail() {
+    const id = AppState.selectedPromptId;
+    this.closeDetailModal();
+    if (id) this.openEditModal(id);
+  },
+
+  // 打开新建弹窗
+  openCreateModal() {
+    AppState.editingPromptId = null;
+    AppState.editFavorite = false;
+    AppState.editRating = 0;
+    document.getElementById('editModalTitle').textContent = '新建 Prompt';
+    document.getElementById('editId').value = '';
+    document.getElementById('editTitle').value = '';
+    document.getElementById('editCategory').value = '其他';
+    document.getElementById('editTags').value = '';
+    document.getElementById('editScenario').value = '';
+    document.getElementById('editContent').value = '';
+    this.renderRatingInput(0);
+    this.updateFavoriteToggle(false);
+    document.getElementById('editModal').classList.add('show');
+    setTimeout(() => document.getElementById('editTitle').focus(), 100);
+  },
+
+  // 打开编辑弹窗
+  openEditModal(id) {
+    const p = AppState.prompts.find(p => p.id === id);
+    if (!p) return;
+    AppState.editingPromptId = id;
+    AppState.editFavorite = p.favorite;
+    AppState.editRating = p.rating;
+    document.getElementById('editModalTitle').textContent = '编辑 Prompt';
+    document.getElementById('editId').value = p.id;
+    document.getElementById('editTitle').value = p.title;
+    document.getElementById('editCategory').value = p.category;
+    document.getElementById('editTags').value = (p.tags || []).join(', ');
+    document.getElementById('editScenario').value = p.scenario || '';
+    document.getElementById('editContent').value = p.content || '';
+    this.renderRatingInput(p.rating);
+    this.updateFavoriteToggle(p.favorite);
+    document.getElementById('editModal').classList.add('show');
+  },
+
+  // 关闭编辑弹窗
+  closeEditModal() {
+    document.getElementById('editModal').classList.remove('show');
+  },
+
+  // 关闭详情弹窗
+  closeDetailModal() {
+    document.getElementById('detailModal').classList.remove('show');
+    AppState.selectedPromptId = null;
+  },
+
+  // 渲染星级评分输入
+  renderRatingInput(rating) {
+    const container = document.getElementById('editRating');
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+      html += '<span class="star' + (i <= rating ? ' active' : '') + '" data-value="' + i + '" onclick="UIController.setEditRating(' + i + ')">★</span>';
+    }
+    container.innerHTML = html;
+  },
+
+  setEditRating(value) {
+    AppState.editRating = value;
+    this.renderRatingInput(value);
+  },
+
+  // 收藏开关
+  toggleEditFavorite() {
+    AppState.editFavorite = !AppState.editFavorite;
+    this.updateFavoriteToggle(AppState.editFavorite);
+  },
+
+  updateFavoriteToggle(fav) {
+    const track = document.getElementById('editFavorite');
+    const label = document.getElementById('editFavoriteLabel');
+    track.classList.toggle('active', fav);
+    label.textContent = fav ? '已收藏' : '未收藏';
+  },
+
+  // 保存 Prompt
+  savePrompt() {
+    const title = document.getElementById('editTitle').value.trim();
+    const content = document.getElementById('editContent').value.trim();
+    if (!title) {
+      this.showToast('请输入标题', 'error');
+      document.getElementById('editTitle').focus();
+      return;
+    }
+    if (!content) {
+      this.showToast('请输入 Prompt 内容', 'error');
+      document.getElementById('editContent').focus();
+      return;
+    }
+
+    const tagsStr = document.getElementById('editTags').value;
+    const tags = tagsStr ? tagsStr.split(/[,，]/).map(t => t.trim()).filter(t => t) : [];
+
+    const data = {
+      title: title,
+      category: document.getElementById('editCategory').value,
+      tags: tags,
+      scenario: document.getElementById('editScenario').value.trim(),
+      content: content,
+      rating: AppState.editRating,
+      favorite: AppState.editFavorite
+    };
+
+    if (AppState.editingPromptId) {
+      PromptService.update(AppState.editingPromptId, data);
+      this.showToast('保存成功');
+    } else {
+      PromptService.create(data);
+      this.showToast('创建成功');
+    }
+
+    this.closeEditModal();
+    this.renderAll();
+  },
+
+  // 确认删除
+  confirmDelete(id) {
+    AppState.pendingDeleteId = id;
+    const p = AppState.prompts.find(p => p.id === id);
+    document.getElementById('confirmText').textContent =
+      '确定要删除「' + (p ? p.title : '') + '」吗？此操作不可撤销。';
+    document.getElementById('confirmModal').classList.add('show');
+  },
+
+  closeConfirm() {
+    document.getElementById('confirmModal').classList.remove('show');
+    AppState.pendingDeleteId = null;
+  },
+
+  confirmAction() {
+    if (AppState.pendingDeleteId) {
+      PromptService.delete(AppState.pendingDeleteId);
+      // 如果删除的是当前选中的，关闭详情
+      if (AppState.selectedPromptId === AppState.pendingDeleteId) {
+        this.closeDetailModal();
+      }
+      this.showToast('已删除');
+      this.closeConfirm();
+      this.renderAll();
+    }
+  },
+
+  // Toast 通知
+  showToast(msg, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 2600);
+  }
+};
+
+// ==================== 启动应用 ====================
+document.addEventListener('DOMContentLoaded', function() {
+  UIController.init();
+});
+</script>
+</body>
+</html>
