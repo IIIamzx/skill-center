@@ -1,0 +1,3 @@
+GitHub CLI upload retest
+created_at=20260707-141033
+method=gh api contents PUT
