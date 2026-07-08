@@ -1,0 +1,3 @@
+GitHub CLI upload third test
+created_at=20260708-150225
+method=gh api contents PUT
